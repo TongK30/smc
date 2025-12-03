@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Dashboard Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* --- CSS CHUNG --- */
+        body { font-family: 'Roboto', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; color: #1c1e21; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        
+        /* TABS & CONTROLS */
+        .tabs { display: flex; gap: 20px; margin-bottom: 20px; border-bottom: 2px solid #f0f2f5; }
+        .tab-btn { padding: 15px 20px; border: none; background: transparent; cursor: pointer; font-weight: 600; color: #65676b; position: relative; transition: 0.3s; }
+        .tab-btn:hover, .tab-btn.active { color: #1877f2; }
+        .tab-btn.active::after { content: ''; position: absolute; bottom: -2px; left: 0; width: 100%; height: 3px; background: #1877f2; }
+        
+        .view-section { display: none; animation: fadeIn 0.4s; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .controls { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .controls-left { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        
+        select, input { padding: 10px; border: 1px solid #ddd; border-radius: 8px; outline: none; }
+        
+        button.btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.2s; display: flex; align-items: center; gap: 5px; color: white; }
+        .btn-primary { background-color: #1877f2; }
+        .btn-success { background-color: #00c853; }
+        .btn:hover { transform: translateY(-1px); opacity: 0.9; }
+
+        /* FILTER BUTTONS STYLE */
+        .filter-group { display: flex; gap: 5px; background: #f0f2f5; padding: 5px; border-radius: 8px; }
+        .filter-btn { padding: 8px 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 13px; color: #555; background: transparent; transition: 0.2s; }
+        .filter-btn:hover { background: rgba(0,0,0,0.05); }
+        .filter-btn.active { background: white; shadow: 0 2px 5px rgba(0,0,0,0.1); font-weight: bold; }
+        
+        .filter-btn.f-all.active { color: #333; border-left: 3px solid #333; }
+        .filter-btn.f-win.active { color: #00c853; border-left: 3px solid #00c853; background: #e8f5e9; }
+        .filter-btn.f-loss.active { color: #d50000; border-left: 3px solid #d50000; background: #ffebee; }
+        .filter-btn.f-be.active { color: #f57f17; border-left: 3px solid #f57f17; background: #fffde7; }
+
+        /* --- DASHBOARD --- */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .d-card { padding: 25px; border-radius: 12px; color: white; min-height: 120px; position: relative; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .d-card h3 { margin: 0; font-size: 14px; opacity: 0.9; text-transform: uppercase; }
+        .d-card .value { font-size: 36px; font-weight: 700; margin-top: 10px; }
+        .bg-blue { background: linear-gradient(135deg, #1877f2, #0d47a1); }
+        .bg-green { background: linear-gradient(135deg, #00c853, #1b5e20); }
+        .bg-purple { background: linear-gradient(135deg, #aa00ff, #4a148c); }
+
+        /* --- TABLE --- */
+        .table-container { overflow-x: auto; border: 1px solid #e4e6eb; border-radius: 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 800px; }
+        th { background: #f7f8fa; padding: 15px; text-align: left; color: #65676b; border-bottom: 2px solid #eee; }
+        td { padding: 12px 15px; border-bottom: 1px solid #f0f2f5; vertical-align: middle; }
+        .badge-res { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .win { color: #00c853; background: #e8f5e9; } .loss { color: #d50000; background: #ffebee; } .be { color: #f57f17; background: #fffde7; }
+        
+        .chart-thumb { height: 60px; border-radius: 4px; border: 1px solid #ddd; cursor: zoom-in; transition: 0.2s; object-fit: cover; }
+        .chart-thumb:hover { transform: scale(1.1); border-color: #1877f2; }
+        
+        .clickable-row { cursor: pointer; transition: background 0.2s; }
+        .clickable-row:hover { background-color: #e3f2fd; }
+
+        /* --- MODAL CHUNG --- */
+        .modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(3px); }
+        .modal-content { background-color: #fff; margin: 2% auto; padding: 0; border-radius: 12px; width: 95%; max-width: 900px; max-height: 90vh; overflow-y: auto; box-shadow: 0 15px 40px rgba(0,0,0,0.2); animation: slideDown 0.3s; display: flex; flex-direction: column; }
+        @keyframes slideDown { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        .modal-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #f9f9f9; position: sticky; top: 0; z-index: 10; }
+        .modal-header h2 { margin: 0; color: #1877f2; font-size: 20px; display: flex; align-items: center; gap: 10px; }
+        .close-btn { font-size: 28px; cursor: pointer; color: #aaa; }
+        .close-btn:hover { color: #333; }
+        .modal-body { padding: 25px; overflow-y: auto; }
+
+        /* --- CSS CHI TIẾT LỆNH --- */
+        .detail-item { background: white; border: 1px solid #eee; border-radius: 10px; padding: 15px; margin-bottom: 15px; border-left: 5px solid #ccc; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
+        .detail-item.win { border-left-color: #00c853; }
+        .detail-item.loss { border-left-color: #d50000; }
+        .detail-item.be { border-left-color: #f57f17; }
+        
+        .detail-top { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px; color: #666; }
+        .detail-result { font-weight: 800; font-size: 16px; margin-bottom: 5px; color: #333; }
+        .detail-note { background: #f8f9fa; padding: 10px; border-radius: 6px; font-size: 14px; margin-top: 10px; color: #444; }
+        .detail-imgs { display: flex; gap: 10px; margin-top: 10px; overflow-x: auto; padding-bottom: 5px; }
+        .detail-imgs img { height: 70px; width: auto; border-radius: 6px; border: 1px solid #ddd; cursor: pointer; transition: transform 0.2s; }
+        .detail-imgs img:hover { transform: scale(1.05); border-color: #1877f2; }
+
+        /* --- LIGHTBOX --- */
+        #lightbox { display: none; position: fixed; z-index: 3000; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); justify-content: center; align-items: center; flex-direction: column; }
+        .lightbox-container { position: relative; max-width: 95%; max-height: 95%; display: flex; justify-content: center; align-items: center; }
+        #lightbox img { max-width: 100%; max-height: 90vh; border: 2px solid white; border-radius: 4px; box-shadow: 0 0 30px rgba(0,0,0,0.5); object-fit: contain; }
+        .lb-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255, 255, 255, 0.1); color: white; border: none; font-size: 30px; padding: 20px 15px; cursor: pointer; transition: 0.3s; border-radius: 5px; z-index: 3001; user-select: none; }
+        .lb-btn:hover { background: rgba(255, 255, 255, 0.3); color: #1877f2; }
+        .lb-prev { left: -60px; } .lb-next { right: -60px; }
+        @media (max-width: 768px) { .lb-prev { left: 10px; background: rgba(0,0,0,0.5); } .lb-next { right: 10px; background: rgba(0,0,0,0.5); } }
+
+        /* --- FORM STYLES --- */
+        .form-section { margin-bottom: 25px; border: 1px solid #eee; border-radius: 8px; padding: 15px; }
+        .section-title { font-weight: 700; font-size: 16px; margin-bottom: 15px; color: #333; display: flex; align-items: center; gap: 8px; }
+        .form-grid { display: grid; gap: 15px; }
+        .grid-2 { grid-template-columns: 1fr 1fr; }
+        .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 13px; color: #555; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; box-sizing: border-box; font-size: 14px; }
+        .form-group input:focus { border-color: #1877f2; }
+        .form-footer { padding: 20px; border-top: 1px solid #eee; background: #f9f9f9; position: sticky; bottom: 0; z-index: 10; }
+        
+        @media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+        #loading { display: none; text-align: center; padding: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('stats')">📊 Dashboard</button>
+        <button class="tab-btn" onclick="switchTab('journal')">📖 Nhật Ký</button>
+    </div>
+
+    <div class="controls">
+        <div class="controls-left">
+            <select id="sheetNameInput" onchange="loadData()">
+                <option value="phan_ung" selected>⚡ Phản Ứng (phan_ung)</option>
+                <option value="HTF">📈 HTF (Cấu trúc lớn)</option>
+            </select>
+            <button class="btn btn-primary" onclick="loadData()">🔄 Tải lại</button>
+
+            <div class="filter-group">
+                <button class="filter-btn f-all active" onclick="filterData('all')">Tất cả</button>
+                <button class="filter-btn f-win" onclick="filterData('win')">Win</button>
+                <button class="filter-btn f-loss" onclick="filterData('loss')">Loss</button>
+                <button class="filter-btn f-be" onclick="filterData('be')">BE</button>
+            </div>
+        </div>
+        <button class="btn btn-success" onclick="openModal()">➕ Thêm Lệnh Mới</button>
+    </div>
+
+    <div id="loading">⏳ Đang xử lý...</div>
+
+    <div id="statsSection" class="view-section active">
+        <div class="dashboard-grid">
+            <div class="d-card bg-blue"><h3>Tổng Lệnh (Hiển thị)</h3><div class="value" id="d-total">0</div></div>
+            <div class="d-card bg-green"><h3>Winrate</h3><div class="value" id="d-winrate">0%</div></div>
+            <div class="d-card bg-purple"><h3>Best Setup</h3><div class="value" id="d-bestSetup" style="font-size:24px">---</div></div>
+        </div>
+        <div class="table-container">
+            <table id="patternTable">
+                <thead><tr><th>MẪU HÌNH</th><th>TỔNG</th><th>WIN</th><th>LOSS</th><th>BE</th><th>WR %</th></tr></thead>
+                <tbody id="patternBody"></tbody>
+            </table>
+        </div>
+        <p style="text-align: center; font-size: 13px; color: #888; margin-top: 10px;">(💡 Click vào tên mẫu hình để xem chi tiết các lệnh)</p>
+    </div>
+
+    <div id="journalSection" class="view-section">
+        <div class="table-container">
+            <table id="journalTable">
+                <thead><tr id="tableHeader"></tr></thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="entryModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">⚡ Nhập Lệnh Mới</h2>
+            <span class="close-btn" onclick="document.getElementById('entryModal').style.display='none'">&times;</span>
+        </div>
+        <form id="dynamicForm" onsubmit="submitForm(event)">
+            <div class="modal-body" id="formContainer"></div>
+            <div class="form-footer">
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px;">💾 LƯU DỮ LIỆU</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="detailModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="detailTitle">📋 Chi tiết lệnh</h2>
+            <span class="close-btn" onclick="document.getElementById('detailModal').style.display='none'">&times;</span>
+        </div>
+        <div class="modal-body" id="detailList">
+            </div>
+    </div>
+</div>
+
+<div id="lightbox" onclick="closeLightbox(event)">
+    <div class="lightbox-container">
+        <button class="lb-btn lb-prev" onclick="changeImage(-1, event)"><i class="fas fa-chevron-left"></i></button>
+        <img id="lightboxImg" src="">
+        <button class="lb-btn lb-next" onclick="changeImage(1, event)"><i class="fas fa-chevron-right"></i></button>
+    </div>
+    <div id="lb-counter" style="color: #aaa; margin-top: 10px; font-size: 16px;"></div>
+</div>
+
+<script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbyApAYuO0KoJXj8dEvEbFcRNXjl9icF-mWmoxtS22_CG89dRnDSHMPBYbGzJ0yaY93eJg/exec";
+
+    // --- CẤU HÌNH CỘT ---
+    const HEADERS_PHAN_UNG = {
+        dòng_tiền: "Dòng tiền", mẫu_hình: "Mẫu hình", kết_quả: "Kết quả", link_htf: "Link Ảnh HTF",
+        link_ltf: "Link Ảnh LTF", link_kq: "Link Ảnh KQ (Optional)", ghi_chú: "Ghi chú", kết_luận: "Kết luận"
+    };
+
+    const HEADERS_HTF = {
+        thời_gian: "Thời gian", cặp_tiền: "Cặp tiền", phiên: "Phiên", img_d1: "D1", img_h4: "H4", img_h1: "H1",
+        img_m15: "M15", cảm_nhận: "Cảm nhận thị trường", entry_type: "Loại Entry", htf_view: "Góc nhìn HTF",
+        kết_quả: "Kết quả lệnh", pip: "Pip", gồng: "Gồng lệnh", ảnh_thực: "Ảnh thực tế", bài_học: "Ghi chú thêm"
+    };
+
+    // --- GLOBAL VARS ---
+    let originalData = []; // Lưu trữ toàn bộ dữ liệu tải về
+    let currentSheet = "";
+
+    // --- 1. FILTER LOGIC ---
+    function filterData(type) {
+        // Cập nhật giao diện nút
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`.f-${type}`).classList.add('active');
+
+        if (!originalData || originalData.length === 0) return;
+
+        let filteredData = [];
+
+        if (type === 'all') {
+            filteredData = originalData;
+        } else {
+            filteredData = originalData.filter(row => {
+                // Tìm cột kết quả (linh hoạt tên cột)
+                let resKey = Object.keys(row).find(k => k.toLowerCase().includes('kết quả') || k.toLowerCase().includes('kq'));
+                let pipKey = Object.keys(row).find(k => k.toLowerCase().includes('pip'));
+                
+                let resVal = resKey && row[resKey] ? String(row[resKey]).toLowerCase() : "";
+                let pipVal = pipKey && row[pipKey] !== "" ? parseFloat(row[pipKey]) : null;
+
+                // Logic lọc
+                if (type === 'win') {
+                    if (resVal.match(/win|tp|chốt|profit/)) return true;
+                    if (pipVal !== null && pipVal > 10) return true;
+                }
+                else if (type === 'loss') {
+                    if (resVal.match(/loss|sl|lỗ|cut|stoploss/)) return true;
+                    if (pipVal !== null && pipVal < 0) return true;
+                }
+                else if (type === 'be') {
+                    if (resVal.match(/be|hòa|break|even/)) return true;
+                    if (pipVal !== null && pipVal >= 0 && pipVal <= 10) return true;
+                }
+                return false;
+            });
+        }
+
+        // Render lại dữ liệu đã lọc
+        renderDashboard(filteredData, currentSheet);
+        renderJournal(filteredData);
+    }
+
+    // --- 2. FORM RENDER ---
+    function renderForm(sheetType) {
+        const container = document.getElementById('formContainer');
+        const title = document.getElementById('modalTitle');
+        let html = '';
+
+        if (sheetType === 'phan_ung') {
+            title.innerHTML = '⚡ Nhập Lệnh (Phản Ứng)';
+            html = `
+                <div class="form-grid grid-3">
+                    <div class="form-group"><label>Dòng tiền</label><input type="text" id="pu_dongtien" placeholder="Mạnh, Yếu..."></div>
+                    <div class="form-group"><label>Mẫu hình</label><select id="pu_mauhinh">
+                        <option value="">-- Chọn Mẫu --</option><option value="Nhấn chìm giảm">Nhấn chìm giảm</option>
+                        <option value="Nhấn chìm tăng">Nhấn chìm tăng</option><option value="Pinbar">Pinbar</option>
+                        <option value="Inside Bar">Inside Bar</option><option value="Fakey">Fakey</option></select></div>
+                    <div class="form-group"><label>Kết quả</label><select id="pu_ketqua"><option value="Đang chạy">⏳ Đang chạy</option><option value="Win">✅ Win</option><option value="Loss">❌ Loss</option><option value="BE">🛡️ BE</option></select></div>
+                </div>
+                <div class="form-grid grid-2" style="margin-top: 15px;">
+                    <div class="form-group"><label>Link Ảnh HTF</label><input type="text" id="pu_htf"></div>
+                    <div class="form-group"><label>Link Ảnh LTF</label><input type="text" id="pu_ltf"></div>
+                </div>
+                <div class="form-group" style="margin-top: 15px;"><label>Link Ảnh KQ (Optional)</label><input type="text" id="pu_kq"></div>
+                <div class="form-group" style="margin-top: 15px;"><label>Ghi chú</label><textarea id="pu_ghichu" rows="2"></textarea></div>
+                <div class="form-group" style="margin-top: 15px;"><label>Kết luận</label><textarea id="pu_ketluan" rows="2"></textarea></div>
+            `;
+        } else {
+            title.innerHTML = '📈 Nhập Lệnh (HTF)';
+            html = `
+                <div class="form-section"><div class="section-title">🕒 Thông Tin</div>
+                    <div class="form-grid grid-3">
+                        <div class="form-group"><label>Thời gian</label><input type="datetime-local" id="htf_time"></div>
+                        <div class="form-group"><label>Cặp tiền</label><select id="htf_pair"><option value="XAUUSD">XAUUSD</option><option value="EURUSD">EURUSD</option><option value="GBPUSD">GBPUSD</option><option value="US30">US30</option><option value="BTCUSD">BTCUSD</option></select></div>
+                        <div class="form-group"><label>Phiên</label><select id="htf_session"><option value="Phiên Á">Phiên Á</option><option value="Phiên Âu">Phiên Âu</option><option value="Phiên Mỹ">Phiên Mỹ</option></select></div>
+                    </div>
+                </div>
+                <div class="form-section"><div class="section-title">📊 Phân Tích</div>
+                    <div class="form-grid grid-3">
+                        <div class="form-group"><label>D1</label><input type="text" id="htf_d1"></div><div class="form-group"><label>H4</label><input type="text" id="htf_h4"></div><div class="form-group"><label>H1</label><input type="text" id="htf_h1"></div>
+                    </div>
+                    <div class="form-group" style="margin-top:10px;"><label>M15</label><input type="text" id="htf_m15"></div>
+                    <div class="form-group" style="margin-top:10px;"><label>Cảm nhận</label><textarea id="htf_sentiment" rows="2"></textarea></div>
+                </div>
+                <div class="form-section"><div class="section-title">🎯 Setup</div>
+                    <div class="form-group"><label>Loại Entry</label><select id="htf_entry"><option value="">-- Chọn --</option><option value="Thuận xu hướng">Thuận xu hướng</option><option value="Đảo chiều">Đảo chiều</option><option value="Pullback">Pullback</option></select></div>
+                    <div class="form-group" style="margin-top:10px;"><label>Góc nhìn HTF</label><select id="htf_view"><option value="HTF thuận hướng M15">HTF thuận hướng M15</option><option value="HTF ngược hướng M15">HTF ngược hướng M15</option></select></div>
+                </div>
+                <div class="form-section"><div class="section-title">🏁 Kết Quả</div>
+                    <div class="form-grid grid-3">
+                        <div class="form-group"><label>Kết quả</label><select id="htf_result"><option value="Full tp">Full TP</option><option value="Stoploss">Stoploss</option><option value="BE">BE</option><option value="Cut tay">Cắt tay</option></select></div>
+                        <div class="form-group"><label>Pip</label><input type="number" id="htf_pip" step="0.1"></div>
+                        <div class="form-group"><label>Gồng lệnh</label><input type="text" id="htf_hold"></div>
+                    </div>
+                    <div class="form-group" style="margin-top:10px;"><label>Ảnh thực</label><input type="text" id="htf_real_img"></div>
+                    <div class="form-group" style="margin-top:10px;"><label>Bài học</label><textarea id="htf_lesson" rows="2"></textarea></div>
+                </div>
+            `;
+        }
+        container.innerHTML = html;
+        if (sheetType === 'HTF') {
+             const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+             document.getElementById('htf_time').value = now.toISOString().slice(0,16);
+        }
+    }
+
+    // --- 3. SUBMIT FORM ---
+    async function submitForm(e) {
+        e.preventDefault();
+        const btn = e.target.querySelector('button[type="submit"]');
+        const originalText = btn.innerText; btn.innerText = "⏳ Đang lưu..."; btn.disabled = true;
+
+        const sheetName = document.getElementById('sheetNameInput').value;
+        let payload = { "sheetName": sheetName };
+
+        if (sheetName === 'phan_ung') {
+            payload[HEADERS_PHAN_UNG.dòng_tiền] = document.getElementById('pu_dongtien').value;
+            payload[HEADERS_PHAN_UNG.mẫu_hình] = document.getElementById('pu_mauhinh').value;
+            payload[HEADERS_PHAN_UNG.kết_quả] = document.getElementById('pu_ketqua').value;
+            payload[HEADERS_PHAN_UNG.link_htf] = document.getElementById('pu_htf').value;
+            payload[HEADERS_PHAN_UNG.link_ltf] = document.getElementById('pu_ltf').value;
+            payload[HEADERS_PHAN_UNG.link_kq] = document.getElementById('pu_kq').value;
+            payload[HEADERS_PHAN_UNG.ghi_chú] = document.getElementById('pu_ghichu').value;
+            payload[HEADERS_PHAN_UNG.kết_luận] = document.getElementById('pu_ketluan').value;
+        } else {
+            let rawTime = document.getElementById('htf_time').value;
+            payload[HEADERS_HTF.thời_gian] = rawTime.replace('T', ' '); 
+            payload[HEADERS_HTF.cặp_tiền] = document.getElementById('htf_pair').value;
+            payload[HEADERS_HTF.phiên] = document.getElementById('htf_session').value;
+            payload[HEADERS_HTF.img_d1] = document.getElementById('htf_d1').value;
+            payload[HEADERS_HTF.img_h4] = document.getElementById('htf_h4').value;
+            payload[HEADERS_HTF.img_h1] = document.getElementById('htf_h1').value;
+            payload[HEADERS_HTF.img_m15] = document.getElementById('htf_m15').value;
+            payload[HEADERS_HTF.cảm_nhận] = document.getElementById('htf_sentiment').value;
+            payload[HEADERS_HTF.entry_type] = document.getElementById('htf_entry').value;
+            payload[HEADERS_HTF.htf_view] = document.getElementById('htf_view').value;
+            payload[HEADERS_HTF.kết_quả] = document.getElementById('htf_result').value;
+            payload[HEADERS_HTF.pip] = document.getElementById('htf_pip').value;
+            payload[HEADERS_HTF.gồng] = document.getElementById('htf_hold').value;
+            payload[HEADERS_HTF.ảnh_thực] = document.getElementById('htf_real_img').value;
+            payload[HEADERS_HTF.bài_học] = document.getElementById('htf_lesson').value;
+        }
+
+        try {
+            const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+            const data = await res.json();
+            if(data.status === 'success') { alert("✅ Lưu thành công!"); document.getElementById('entryModal').style.display = "none"; loadData(); } 
+            else { alert("❌ Lỗi: " + data.message); }
+        } catch (error) { console.error(error); alert("⚠️ Lỗi kết nối!"); } 
+        finally { btn.innerText = originalText; btn.disabled = false; }
+    }
+
+    // --- 4. DATA LOADING & FILTER ---
+    function switchTab(name) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+        document.getElementById(name + 'Section').classList.add('active');
+    }
+    function openModal() { renderForm(document.getElementById('sheetNameInput').value); document.getElementById('entryModal').style.display = "block"; }
+    
+    window.onclick = function(e) { 
+        if (e.target == document.getElementById('entryModal')) document.getElementById('entryModal').style.display = "none";
+        if (e.target == document.getElementById('detailModal')) document.getElementById('detailModal').style.display = "none";
+    }
+
+    async function loadData() {
+        currentSheet = document.getElementById('sheetNameInput').value;
+        document.getElementById('loading').style.display = 'block';
+        
+        // Reset filter về All
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector('.f-all').classList.add('active');
+
+        try {
+            const res = await fetch(`${API_URL}?mode=api&sheet=${currentSheet}`);
+            const data = await res.json();
+            document.getElementById('loading').style.display = 'none';
+            if (data.status === 'error' || !Array.isArray(data)) { alert("Không có dữ liệu!"); return; }
+            
+            // LƯU DỮ LIỆU GỐC
+            originalData = data;
+            
+            renderDashboard(originalData, currentSheet);
+            renderJournal(originalData);
+        } catch (e) { document.getElementById('loading').style.display = 'none'; alert("Lỗi tải dữ liệu"); }
+    }
+
+    function renderDashboard(data, sheetName) {
+        let total = 0, win = 0, loss = 0;
+        let patterns = {};
+        const isPhanUng = (sheetName === 'phan_ung');
+
+        data.forEach(row => {
+            let pipKey = Object.keys(row).find(k => k.toLowerCase().includes('pip'));
+            let entryKey = Object.keys(row).find(k => k.toLowerCase().includes('entry') || k.toLowerCase().includes('mẫu'));
+            let resKey = Object.keys(row).find(k => k.toLowerCase().includes('kết quả') || k.toLowerCase().includes('kq'));
+
+            let pName = entryKey && row[entryKey] ? row[entryKey].toString().trim() : "Khác";
+            if (!patterns[pName]) patterns[pName] = { win: 0, loss: 0, be: 0, total: 0, rows: [] };
+
+            let isW = false, isL = false, isB = false, valid = false;
+
+            if (isPhanUng) {
+                if (resKey && row[resKey]) {
+                    let val = String(row[resKey]).toLowerCase();
+                    if(val.trim() !== "") {
+                        valid = true;
+                        if (val.match(/win|tp/)) isW = true;
+                        else if (val.match(/loss|sl/)) isL = true;
+                        else if (val.match(/be|hòa/)) isB = true;
+                    }
+                }
+            } else {
+                if (pipKey && row[pipKey] !== "") {
+                    let pip = parseFloat(row[pipKey]);
+                    if (!isNaN(pip)) {
+                        valid = true;
+                        if (pip < 0) isL = true;
+                        else if (pip > 0 && pip <= 10) isB = true;
+                        else isW = true;
+                    }
+                }
+            }
+
+            if (valid) {
+                total++; patterns[pName].total++;
+                patterns[pName].rows.push(row);
+                if (isW) { patterns[pName].win++; win++; }
+                else if (isL) { patterns[pName].loss++; loss++; }
+                else if (isB) { patterns[pName].be++; }
+            }
+        });
+
+        document.getElementById('d-total').innerText = total;
+        let wr = (win + loss) > 0 ? (win / (win + loss) * 100) : 0;
+        document.getElementById('d-winrate').innerText = wr.toFixed(1) + "%";
+
+        const tbody = document.getElementById('patternBody'); tbody.innerHTML = '';
+        let arr = Object.keys(patterns).map(k => {
+            let p = patterns[k];
+            let w = (p.win + p.loss) > 0 ? (p.win/(p.win+p.loss)*100) : 0;
+            return { name: k, ...p, wr: w };
+        }).sort((a,b) => b.wr !== a.wr ? b.wr - a.wr : b.total - a.total);
+
+        if(arr.length > 0 && total > 0) document.getElementById('d-bestSetup').innerText = arr[0].name;
+        
+        arr.forEach(p => {
+            if(p.name === "Khác" && p.total === 0) return;
+            let tr = document.createElement('tr');
+            tr.className = "clickable-row";
+            tr.innerHTML = `<td><b style="color:#1877f2">${p.name}</b></td><td><b>${p.total}</b></td><td class="badge-res win">${p.win}</td><td class="badge-res loss">${p.loss}</td><td class="badge-res be">${p.be}</td><td><b>${p.wr.toFixed(0)}%</b></td>`;
+            tr.onclick = function() { showDetailModal(p.name, p.rows, isPhanUng); };
+            tbody.appendChild(tr);
+        });
+    }
+
+    function showDetailModal(patternName, rows, isPhanUng) {
+        document.getElementById('detailTitle').innerText = `📋 Chi tiết: ${patternName} (${rows.length} lệnh)`;
+        const container = document.getElementById('detailList');
+        container.innerHTML = '';
+
+        rows.slice().reverse().forEach(row => {
+            let status = 'be';
+            let resultText = "";
+            let timeText = "";
+            let pairText = "";
+            let noteText = "";
+
+            if (isPhanUng) {
+                resultText = row[HEADERS_PHAN_UNG.kết_quả] || "";
+                timeText = "Phản ứng";
+                pairText = row[HEADERS_PHAN_UNG.dòng_tiền] || "";
+                noteText = row[HEADERS_PHAN_UNG.ghi_chú] || "";
+            } else {
+                resultText = row[HEADERS_HTF.kết_quả] || "";
+                timeText = row[HEADERS_HTF.thời_gian] || "";
+                pairText = row[HEADERS_HTF.cặp_tiền] || "";
+                noteText = row[HEADERS_HTF.bài_học] || "";
+            }
+
+            if (String(resultText).toLowerCase().match(/win|tp|chốt/)) status = 'win';
+            else if (String(resultText).toLowerCase().match(/loss|sl|lỗ/)) status = 'loss';
+
+            let imagesHtml = '';
+            Object.values(row).forEach(val => {
+                if (typeof val === 'string' && val.startsWith('http') && (val.includes('tradingview') || val.match(/\.(jpg|png|jpeg)/i))) {
+                    imagesHtml += `<img src="${val}" onclick="openLightbox(this)">`;
+                }
+            });
+
+            let div = document.createElement('div');
+            div.className = `detail-item ${status}`;
+            div.innerHTML = `
+                <div class="detail-top">
+                    <span>📅 ${timeText}</span>
+                    <span style="font-weight:bold">${pairText}</span>
+                </div>
+                <div class="detail-result">${resultText}</div>
+                <div class="detail-note">${noteText || "Không có ghi chú"}</div>
+                <div class="detail-imgs">${imagesHtml}</div>
+            `;
+            container.appendChild(div);
+        });
+
+        document.getElementById('detailModal').style.display = 'block';
+    }
+
+    function renderJournal(data) {
+        const h = document.getElementById('tableHeader'); const b = document.getElementById('tableBody');
+        h.innerHTML = ''; b.innerHTML = '';
+        if (data.length === 0) return;
+        Object.keys(data[0]).forEach(k => { let th = document.createElement('th'); th.textContent = k; h.appendChild(th); });
+        
+        data.slice().reverse().forEach(row => {
+            let tr = document.createElement('tr');
+            Object.keys(row).forEach(k => {
+                let td = document.createElement('td'); let v = row[k];
+                if (typeof v === 'string' && v.startsWith('http') && (v.includes('tradingview')||v.match(/\.(jpg|png|jpeg)/i))) 
+                    td.innerHTML = `<img src="${v}" class="chart-thumb" onclick="openLightbox(this)">`;
+                else td.textContent = v;
+                tr.appendChild(td);
+            });
+            b.appendChild(tr);
+        });
+    }
+
+    // --- LIGHTBOX LOGIC ---
+    let currentGallery = [];
+    let currentIndex = 0;
+
+    function openLightbox(imgElement) {
+        let parent = imgElement.closest('.detail-imgs') || imgElement.closest('tr');
+        if (parent) {
+            const images = parent.querySelectorAll('img');
+            currentGallery = Array.from(images).map(img => img.src);
+        } else {
+            currentGallery = [imgElement.src];
+        }
+        currentIndex = currentGallery.indexOf(imgElement.src);
+        if (currentIndex === -1) currentIndex = 0;
+        updateLightboxImage();
+        document.getElementById('lightbox').style.display = 'flex';
+    }
+
+    function changeImage(direction, event) {
+        if(event) event.stopPropagation();
+        currentIndex += direction;
+        if (currentIndex >= currentGallery.length) currentIndex = 0;
+        else if (currentIndex < 0) currentIndex = currentGallery.length - 1;
+        updateLightboxImage();
+    }
+
+    function updateLightboxImage() {
+        const img = document.getElementById('lightboxImg');
+        img.src = currentGallery[currentIndex];
+        const counter = document.getElementById('lb-counter');
+        if (currentGallery.length > 1) {
+            counter.innerText = `Ảnh ${currentIndex + 1} / ${currentGallery.length}`;
+            document.querySelector('.lb-prev').style.display = 'block';
+            document.querySelector('.lb-next').style.display = 'block';
+        } else {
+            counter.innerText = "";
+            document.querySelector('.lb-prev').style.display = 'none';
+            document.querySelector('.lb-next').style.display = 'none';
+        }
+    }
+
+    function closeLightbox(event) {
+        if (event.target.id === 'lightbox' || event.target.classList.contains('lightbox-container')) {
+            document.getElementById('lightbox').style.display = 'none';
+        }
+    }
+    document.addEventListener('keydown', function(e) {
+        if (document.getElementById('lightbox').style.display === 'flex') {
+            if (e.key === 'ArrowLeft') changeImage(-1);
+            if (e.key === 'ArrowRight') changeImage(1);
+            if (e.key === 'Escape') document.getElementById('lightbox').style.display = 'none';
+        }
+    });
+
+    window.onload = loadData;
+</script>
+
+</body>
+</html>
